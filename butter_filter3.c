@@ -1,8 +1,9 @@
 #include <stdio.h>
+#include <math.h>
 
 #define PI 3.14159265358979323846
-#define sine_amplitude  2
-#define cos_amplitude   2
+#define sine_amplitude  10
+#define cos_amplitude   10
 #define num_samples     100
 #define order           2 // filter order
 
@@ -11,10 +12,11 @@ double cutoff_freq = 100; //cutoff frequemcy
 double sine_freq = 6000; //6khz
 double cos_freq = 6000; //6khz
 double gen_freq = 6000; //6khz
+long double a[3], b[3];
 
 /* filter coefficients */
-double b[order +1];
-double a[order +1];
+double f_b[order +1];
+double f_a[order +1];
 
 /* private variables*/
 double sine_wave[num_samples];
@@ -22,6 +24,17 @@ double cos_wave[num_samples];
 double mul_out_i[num_samples];
 double mul_out_q[num_samples];
 double gen_wave[num_samples];
+double amplitude[num_samples];
+double filtered_signal_i[num_samples]; // Filtered signal
+double filtered_signal_q[num_samples]; // Filtered signal
+double x[order+1] = {0}; // Input samples
+double y[order+1] = {0}; // Output samples
+
+double previous_inputs[2] = {0, 0};
+double previous_outputs[2] = {0, 0};
+
+long m_b[3] = { 9.825916820482009e-06, 1.965183364096402e-05, 9.825916820482009e-06};
+long m_a[3] = { 1.000000000000000, -1.991114292201654, 0.991153595868935 };
 
 /*double gen_wave[num_samples] = {32768,34846,36916,38969,40997,42992,44946,46851,48699,50483,52196,53830,55380,56838,58200,59459,
     60611,61651,62574,63377,64057,64611,65037,65333,65498,65531,65432,65201,64840,64350,63733,62991,
@@ -30,9 +43,61 @@ double gen_wave[num_samples];
     6692,5486,4390,3408,2544,1802,1185,695,334,103,4,37,202,498,924,1478,2158,2961,3884,4924,6076,7335,8697,10155,
     11705,13339,15052,16836,18684,20589,22543,24538,26566,28619,30689,32768};*/
 
-double filter_coeffients(){
+/* calculate butterworth filter coeffients*/
+void filter_coeffients(){
+   long double wc = 2.0 * PI * cutoff_freq / fs;
+   long double c1 = cos(wc);
+   long double s1 = sin(wc);
+   long  double alpha = s1 / (2.0 * sqrt(pow(2.0, 1.0/order) - 1.0));
+   long double a0 = 1.0 + alpha;
+   long double a1 = -2.0 * c1;
+   long double a2 = 1.0 - alpha;
+   long  double b0 = (1.0 - c1) / 2.0 / a0;
+   long  double b1 = (1.0 - c1) / a0;
+   long  double b2 = (1.0 - c1) / 2.0 / a0;
 
+    a[0] = a0;
+    a[1] = a1;
+    a[2] = a2;
+    b[0] = b0;
+    b[1] = b1;
+    b[2] = b2;
 }
+
+/* butterworth lowpass filter implementaion */
+void filter(double* input, double* output)
+{
+    // int i;
+    // // Shift input and output samples
+    // for(i = order; i >= 1; i--)
+    // {
+    //     x[i] = x[i-1];
+    //     y[i] = y[i-1];
+    // }
+    // x[0] = input;
+    
+    // // Calculate output
+    // y[0] = f_b[0]*x[0];
+    // for(i = 1; i <= order; i++)
+    // {
+    //     y[0] += f_b[i]*x[i] - f_a[i]*y[i];
+    // }
+    
+    // *output = y[0];
+
+
+    for (int i = 0; i < num_samples; i++) {
+        double x = input[i];
+        double y = m_b[0] * x + m_b[1] * previous_inputs[0]  + m_b[2] * previous_inputs[1]
+                -  m_a[1] * previous_outputs[0]-   m_a[2] * previous_outputs[1] ;
+        output[i] = y;
+        previous_inputs[1] = previous_inputs[0];
+        previous_inputs[0] = x;
+        previous_outputs[1] = previous_outputs[0];
+        previous_outputs[0] = y;
+    }
+}
+
 
 int main()
 {
@@ -65,15 +130,34 @@ int main()
     {
         mul_out_q[l] = gen_wave[l] * cos_wave[l];
     }
-
+    
+    /* i phase butterworth filter function */
+    for(int m = 0; m < num_samples ; m++)
+    {
+        filter(&mul_out_i[m], &filtered_signal_i[m]);
+    }
+    
+    /* q phase butterworth filter function */
+    for(int n = 0; n < num_samples ; n++)
+    {
+        filter(&mul_out_q[n], &filtered_signal_q[n]);
+    }
 
     
-
-
-
-       
-
-    
-    
+    for(int n = 0; n < num_samples ; n++)
+    {
+        printf("filtered signal i [%d ] = %lf\n",n,filtered_signal_i[n]);
+    }
+    for(int n = 0; n < num_samples ; n++)
+    {
+        printf("filtered signal q [%d ] = %lf\n",n,filtered_signal_q[n]);
+    }
+    /* amplitude */
+    for(int p = 0; p < num_samples ; p++)
+    {
+        amplitude[p] = sqrt((filtered_signal_i[p] * filtered_signal_i[p]) + (filtered_signal_q[p] * filtered_signal_q[p]));
+    };
+        printf("amplitude of %d point = %lf",1,amplitude[0]);
+  
     return 0;
 }
