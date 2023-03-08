@@ -65,8 +65,25 @@ void filter_coeffients(){
 }
 
 /* butterworth lowpass filter implementaion */
-void filter(double* input, double* output)
+double filter(double input, double* x, double* y)
 {
+   // printf("%lf %lf %lf \n", input,x,y);
+     double output = 0;
+
+    // Add the new input to the input buffer
+    x[0] = input;
+
+    // Calculate the new output
+    output += m_b[0] * x[0];
+    output += m_b[1] * x[1];
+    output += m_b[2] * x[2];
+    output -= m_a[1] * y[1];
+    output -= m_a[2] * y[2];
+
+    // Add the new output to the output buffer
+    y[0] = output;
+printf("output %lf\n",output);
+    return output;
     // int i;
     // // Shift input and output samples
     // for(i = order; i >= 1; i--)
@@ -85,17 +102,6 @@ void filter(double* input, double* output)
     
     // *output = y[0];
 
-
-    for (int i = 0; i < num_samples; i++) {
-        double x = input[i];
-        double y = m_b[0] * x + m_b[1] * previous_inputs[0]  + m_b[2] * previous_inputs[1]
-                -  m_a[1] * previous_outputs[0]-   m_a[2] * previous_outputs[1] ;
-        output[i] = y;
-        previous_inputs[1] = previous_inputs[0];
-        previous_inputs[0] = x;
-        previous_outputs[1] = previous_outputs[0];
-        previous_outputs[0] = y;
-    }
 }
 
 
@@ -104,19 +110,19 @@ int main()
     /* sine wave generation */
     for (int i = 0; i < num_samples ; i++)
     {
-        sine_wave[i]= sine_amplitude * sin(2* PI * sine_freq/fs);
+        sine_wave[i]= sine_amplitude * sin(2.0* PI * sine_freq/fs * i);
     }
 
     /* cosine wave generation */
     for (int j = 0; j < num_samples ; j++)
     {
-        cos_wave[j]= cos_amplitude * cos(2* PI* cos_freq /fs);
+        cos_wave[j]= cos_amplitude * cos(2* PI* cos_freq /fs * j);
     }
 
     /* cosine wave generation */
     for (int j = 0; j < num_samples ; j++)
     {
-        gen_wave[j]= sine_amplitude * sin(2* PI* sine_freq /fs);
+        gen_wave[j]= sine_amplitude * sin(2* PI* sine_freq /fs * j);
     }
 
     /* multiply sine wave with gen wave */
@@ -134,23 +140,24 @@ int main()
     /* i phase butterworth filter function */
     for(int m = 0; m < num_samples ; m++)
     {
-        filter(&mul_out_i[m], &filtered_signal_i[m]);
+        filtered_signal_i[m]= filter(mul_out_i[m], x,y);
+        //printf("%lf\n",filtered_signal_i[m]);
     }
     
     /* q phase butterworth filter function */
     for(int n = 0; n < num_samples ; n++)
     {
-        filter(&mul_out_q[n], &filtered_signal_q[n]);
+        filtered_signal_q[n]= filter(mul_out_i[n], x,y);
     }
 
     
     for(int n = 0; n < num_samples ; n++)
     {
-        printf("filtered signal i [%d ] = %lf\n",n,filtered_signal_i[n]);
+        //printf("filtered signal i [%d ] = %lf\n",n,filtered_signal_i[n]);
     }
     for(int n = 0; n < num_samples ; n++)
     {
-        printf("filtered signal q [%d ] = %lf\n",n,filtered_signal_q[n]);
+       // printf("filtered signal q [%d ] = %lf\n",n,filtered_signal_q[n]);
     }
     /* amplitude */
     for(int p = 0; p < num_samples ; p++)
