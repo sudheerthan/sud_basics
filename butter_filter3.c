@@ -82,7 +82,7 @@ double filter(double input, double* x, double* y)
 
     // Add the new output to the output buffer
     y[0] = output;
-printf("output %lf\n",output);
+    printf("output %lf\n",output);
     return output;
     // int i;
     // // Shift input and output samples
@@ -104,6 +104,17 @@ printf("output %lf\n",output);
 
 }
 
+void butt_filter(double* input, double* output)
+{
+    // Iterate over all input samples
+    for (int i = 0; i < num_samples; i++) {
+        // Calculate the current output sample using the difference equation
+        double y = m_b[0] * input[i] + m_b[1] * input[i-1] + m_b[2] * input[i-2] - m_a[1] * output[i-1] - m_a[2] * output[i-2];
+
+        // Store the output sample in the output buffer
+        output[i] = y;
+    }
+}
 
 int main()
 {
@@ -140,7 +151,8 @@ int main()
     /* i phase butterworth filter function */
     for(int m = 0; m < num_samples ; m++)
     {
-        filtered_signal_i[m]= filter(mul_out_i[m], x,y);
+        //filtered_signal_i[m]= filter(mul_out_i[m], x,y);
+        butt_filter(mul_out_i[m],filtered_signal_i[m]);
         //printf("%lf\n",filtered_signal_i[m]);
     }
     
