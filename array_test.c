@@ -41,7 +41,7 @@ int main()
     {
         //filtered_signal_i[m]= filter(mul_out_i[m], x,y);
 
-        printf("%lf\n",filtered_signal_i[m]);
+        printf("%2.03lf\n",filtered_signal_i[m]);
     }
     
     return 0;
